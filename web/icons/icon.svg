@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1b1d3d"/>
+  <g transform="translate(256 272) scale(.86)">
+    <!-- chopsticks -->
+    <path d="M52 -104 L132 -168" stroke="#ede7ff" stroke-width="13" stroke-linecap="round"/>
+    <path d="M82 -92 L162 -156" stroke="#ede7ff" stroke-width="13" stroke-linecap="round"/>
+    <!-- steam -->
+    <path d="M-62 -82c-18-22 18-34 0-58M-8 -82c-18-22 18-34 0-58M46 -82c-18-22 18-34 0-58" fill="none" stroke="#a98bff" stroke-width="13" stroke-linecap="round" transform="translate(-14 4)"/>
+    <!-- bowl -->
+    <path d="M-132 -42h264c0 84-58 140-132 140s-132-56-132-140z" fill="#7c5cf6"/>
+    <rect x="-146" y="-56" width="292" height="26" rx="13" fill="#ede7ff"/>
+    <rect x="-52" y="92" width="104" height="22" rx="11" fill="#7c5cf6"/>
+    <circle cx="-44" cy="14" r="13" fill="#ede7ff" opacity=".9"/>
+    <circle cx="8" cy="38" r="13" fill="#ede7ff" opacity=".9"/>
+    <circle cx="58" cy="6" r="13" fill="#ede7ff" opacity=".9"/>
+  </g>
+</svg>
