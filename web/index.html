@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ThaiTastes</title>
+<meta name="description" content="Greg and Andra's food journal for Thailand">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1b1d3d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ThaiTastes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/theme.js"></script>
+</head>
+<body>
+<main id="login" class="login" hidden>
+  <div class="card login-card" id="login-card"></div>
+</main>
+
+
+<div class="wrap" id="app" hidden>
+  <header class="top">
+    <span class="tbar"><button type="button" class="backbtn" id="back" hidden aria-label="Back"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg></button><h1 id="screen-title">New dish</h1></span>
+    <span class="today" id="today"></span>
+    <p class="sub" id="screen-sub" hidden></p>
+  </header>
+  <p id="sync" class="status" role="status">Loading the journal…</p>
+
+  <section id="v-log" class="view" hidden aria-labelledby="log-title">
+    <h2 id="log-title" class="vh">Log a dish</h2>
+
+    <div class="field" id="dish-search">
+      <label class="lbl" for="dish-q">What did you eat?</label>
+      <input id="dish-q" class="combo" type="search" role="combobox" aria-controls="dish-res" aria-autocomplete="list" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="Khao soi, curry, mango…">
+      <ul id="dish-res" class="res"></ul>
+    </div>
+
+    <div class="hero step" id="hero" hidden>
+      <div class="hero-img" id="hero-img"></div>
+      <button type="button" class="hero-meta" id="when-btn" aria-expanded="false" aria-controls="when-panel" aria-label="Change date or stop"><span class="hero-chip"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg><span id="hero-stage"></span><svg class="ic when-ed" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><span class="hero-date" id="hero-date"></span></button>
+      <button type="button" class="glass hero-fav" id="f-fav" aria-pressed="false" aria-label="Add to favorites"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></button>
+      <input id="f-photo" class="vh" type="file" accept="image/*">
+      <button type="button" class="glass hero-photo-x" id="hero-photo-x" hidden aria-label="Remove photo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <label class="hero-photo" for="f-photo" id="hero-photo" hidden aria-label="Add photo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg></label>
+    </div>
+    <div class="dish-card step" id="dish-card" hidden>
+      <span class="dtile" id="dish-tile"></span>
+      <div class="dname" id="dish-name"></div>
+      <button type="button" class="iconbtn" id="dish-change" aria-label="Change dish"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg></button>
+    </div>
+
+    <div class="card when-panel" id="when-panel" hidden>
+      <label class="lbl" for="f-date">Date</label><input id="f-date" class="inp" type="date">
+      <label class="lbl" for="f-stage">Stop</label><select id="f-stage" class="inp"></select>
+    </div>
+    <div class="card step" id="step-score" hidden>
+      <div class="card-h"><h3>Rating</h3><span class="desc">How good was it?</span></div>
+      <div class="score" data-p="g" role="group" aria-label="Greg's score"><span class="who"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Greg</span></div>
+      <div class="score" data-p="a" role="group" aria-label="Andra's score"><span class="who"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Andra</span></div>
+    </div>
+
+    <div class="step" id="step-more" hidden>
+      <div class="tiles">
+        <button type="button" class="tile" id="t-place"><span class="ttile"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0"/><path d="M5.5 12v8h13v-8"/><path d="M10 20v-4h4v4"/></svg></span><span class="tbody"><span class="tlbl">Place</span><span class="tval" id="t-place-v"></span></span><svg class="tgo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg></button>
+        <label class="tile" for="f-price"><span class="ttile"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg></span><span class="tbody"><span class="tlbl">Price</span><span class="tprice"><input id="f-price" type="number" inputmode="numeric" min="0" step="1" placeholder="Add"><span class="cur">฿</span></span></span></label>
+      </div>
+
+      <div class="card" id="place-panel" hidden>
+        <div class="card-h"><label class="h3" for="place-q">Where did you eat?</label><button type="button" class="linkbtn" id="place-clear" hidden>No place</button></div>
+        <input id="place-q" class="combo" type="search" role="combobox" aria-controls="place-res" aria-autocomplete="list" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Restaurant, stall, market…">
+        <ul id="place-res" class="res"></ul>
+      </div>
+
+      <div class="card spice-card">
+        <div class="card-h"><label class="h3 withic" for="f-spice"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 8c3.2 0 6 2.2 6 5.2C20 18 14.5 21 7.5 21 5.8 21 4 20.4 4 19.5c4.5 0 8.5-3.6 8.5-8.6 0-1.6.4-2.9 1.5-2.9Z"/><path d="M14 8c0-2.1.9-3.6 2.6-4.5"/></svg>How spicy</label><span class="spice-val zero" id="spice-v">0 / 10</span></div>
+        <input id="f-spice" class="spice" type="range" min="0" max="10" step="1" value="0">
+        <div class="spice-scale" aria-hidden="true"><span>None</span><span>Extreme</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><label class="h3 withic" for="f-note"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Note</label></div>
+        <textarea id="f-note" maxlength="400" placeholder="What was good, what you'd change"></textarea>
+      </div>
+
+    </div>
+
+    <p id="form-err" class="err" role="alert"></p>
+    <div class="actions step" id="log-actions" hidden>
+      <button type="button" id="save" class="primary" disabled><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg><span id="save-txt">Save dish</span></button>
+    </div>
+    <div class="danger" id="del-zone" hidden>
+      <button type="button" id="del">Delete dish</button>
+    </div>
+  </section>
+
+  <section id="v-dish" class="view" hidden aria-label="Dish"><div id="dish-page"></div></section>
+  <section id="v-place" class="view" hidden aria-label="Place"><div id="place-page"></div></section>
+
+  <section id="v-check" class="view" hidden aria-labelledby="check-title">
+    <h2 id="check-title" class="vh">Food</h2>
+    <div id="check"></div>
+    <details class="credits" id="credits" hidden><summary>Photos: Wikimedia Commons · sources</summary><ul id="credits-list"></ul></details>
+  </section>
+
+  <section id="v-edit" class="view" hidden aria-labelledby="edit-title">
+    <h2 id="edit-title" class="etitle">New dish</h2>
+    <div id="ed-dish">
+      <div class="field"><label class="lbl" for="ed-rom">Name, as you read it</label><input id="ed-rom" type="text" maxlength="80" autocomplete="off" autocapitalize="sentences" placeholder="Khao kluk kapi"></div>
+      <div class="field"><label class="lbl" for="ed-desc">Description</label><textarea id="ed-desc" maxlength="300" placeholder="What it is, how it's eaten"></textarea></div>
+      <div class="field"><label class="lbl" for="ed-region">Region</label><select id="ed-region"></select></div>
+    </div>
+    <div id="ed-place">
+      <div id="ed-place-core">
+      <div class="field"><label class="lbl" for="ed-name">Name</label><input id="ed-name" type="text" maxlength="80" autocomplete="off" placeholder="The stall next to the apartment"></div>
+      <div class="field"><label class="lbl" for="ed-addr">Address or landmark</label><input id="ed-addr" type="text" maxlength="160" autocomplete="off" placeholder="Soi, street, neighbourhood"></div>
+      <div class="field"><label class="lbl" for="ed-stage">Trip stop</label><select id="ed-stage"></select></div>
+      </div>
+      <div class="field"><label class="lbl" for="ed-ig">Instagram link</label><input id="ed-ig" type="url" inputmode="url" maxlength="300" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://www.instagram.com/reel/..."></div>
+      <div class="field"><label class="lbl" for="ed-note">Note</label><textarea id="ed-note" maxlength="1000" placeholder="What to order, when to go, who told us"></textarea></div>
+    </div>
+    <p id="ed-err" class="err" role="alert"></p>
+    <div class="actions">
+      <button type="button" id="ed-cancel" class="secondary">Cancel</button>
+      <button type="button" id="ed-save" class="primary">Save</button>
+    </div>
+    <div class="danger" id="ed-del-zone" hidden>
+      <button type="button" id="ed-del">Remove from list</button>
+      <span id="ed-del-ask" hidden><span class="q">Delete for good?</span><button type="button" class="yes" id="ed-del-yes">Yes, delete</button><button type="button" id="ed-del-no">No</button></span>
+    </div>
+  </section>
+
+  <section id="v-hist" class="view" hidden aria-labelledby="hist-title">
+    <h2 id="hist-title" class="vh">History</h2>
+    <div class="filters">
+      <div class="chips" id="h-stage" role="group" aria-label="Filter by stop"></div>
+    </div>
+    <div id="hist"></div>
+  </section>
+
+  <section id="v-sum" class="view" aria-labelledby="sum-title">
+    <h2 id="sum-title" class="vh">Home</h2>
+    <div id="sum"></div>
+  </section>
+  <section id="v-settings" class="view" hidden aria-labelledby="settings-title">
+    <h2 id="settings-title" class="vh">Settings</h2>
+    <div id="settings"></div>
+  </section>
+
+  <section id="v-suggest" class="view" hidden aria-labelledby="suggest-title">
+    <h2 id="suggest-title" class="vh">Suggestions</h2>
+    <div id="suggest"></div>
+  </section>
+</div>
+
+<nav class="tabs" id="tabs" aria-label="Screens" hidden>
+  <div class="in">
+    <button type="button" data-v="sum" aria-current="page"><span class="pill"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M11.3 2.6a1 1 0 0 1 1.4 0l8.3 7.6c.3.3.5.6.5 1V20a1.5 1.5 0 0 1-1.5 1.5H15v-6h-6v6H4A1.5 1.5 0 0 1 2.5 20v-8.8c0-.4.2-.7.5-1Z"/></svg></span><span class="tl">Home</span></button>
+    <button type="button" data-v="food"><span class="pill"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 2.5h11A1.5 1.5 0 0 1 19 4v17.2a.8.8 0 0 1-1.2.6L12 18l-5.8 3.8a.8.8 0 0 1-1.2-.6V4a1.5 1.5 0 0 1 1.5-1.5Z"/></svg></span><span class="tl">To try</span></button>
+    <span class="plus-slot"><button type="button" class="plusbtn" id="plus" aria-label="Log a dish"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></span>
+    <button type="button" data-v="favs"><span class="pill"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></span><span class="tl">Favorites</span></button>
+    <button type="button" data-v="hist"><span class="pill"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M12 1.75a10.25 10.25 0 1 0 0 20.5 10.25 10.25 0 0 0 0-20.5ZM13 6.5h-2v6.1l4.6 2.8 1-1.7-3.6-2.2Z"/></svg></span><span class="tl">History</span></button>
+  </div>
+</nav>
+
+<script src="js/supabase.umd.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
