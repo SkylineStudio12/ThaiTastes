@@ -1,0 +1,30 @@
+# Supabase CLI config. `supabase link --project-ref <ref>` then `supabase db push` applies supabase/migrations.
+project_id = "thaitastes"
+
+[api]
+enabled = true
+schemas = ["public"]
+max_rows = 1000
+
+[db]
+major_version = 15
+
+[auth]
+enabled = true
+# Greg and Andra are created by scripts/migrate.mjs. Nobody else may sign up.
+enable_signup = false
+# Replace with your Pages URL (and keep localhost for development). Also set these in the Dashboard: Auth > URL Configuration.
+site_url = "https://YOUR-GITHUB-USER.github.io/thaitastes/"
+additional_redirect_urls = ["https://YOUR-GITHUB-USER.github.io/thaitastes/", "http://localhost:8080/"]
+jwt_expiry = 3600
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+
+[storage]
+enabled = true
+file_size_limit = "8MiB"
+
+[realtime]
+enabled = true
