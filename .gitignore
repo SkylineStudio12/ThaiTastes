@@ -1,0 +1,13 @@
+# secrets and private data: this repo is public
+.env
+.env.*
+!.env.example
+!.env.migrate.example
+*.pem
+# the export bundle holds the journal and photos
+thaitastes-export/
+export/
+node_modules/
+.DS_Store
+supabase/.temp/
+supabase/.branches/
