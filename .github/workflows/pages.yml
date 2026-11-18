@@ -1,0 +1,65 @@
+name: Test and deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Data layer tests (against a fake Supabase)
+        run: npm test
+      - name: Migration script tests
+        run: cd scripts && npm ci && node --test
+      - name: Schema and RLS tests (throwaway Postgres)
+        run: bash supabase/tests/run-local.sh
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Write the public config (URL and anon key only)
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          node -e '
+            const { SUPABASE_URL: u, SUPABASE_ANON_KEY: k, GITHUB_SHA: sha } = process.env;
+            if (!u || !k) { console.error("Set the repository variables SUPABASE_URL and SUPABASE_ANON_KEY (Settings > Secrets and variables > Actions > Variables)."); process.exit(1); }
+            if (/^sb_secret_/.test(k) || /service_role/i.test(Buffer.from(k.split(".")[1] || "", "base64url").toString())) { console.error("That looks like the service-role key. Use the anon key."); process.exit(1); }
+            require("fs").writeFileSync("web/js/config.js", `export const SUPABASE_URL = ${JSON.stringify(u)};\nexport const SUPABASE_ANON_KEY = ${JSON.stringify(k)};\nexport const BUILD = ${JSON.stringify(sha.slice(0, 7))};\n`);
+          '
+          sed -i "s/__BUILD__/${GITHUB_SHA}/" web/sw.js
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4
