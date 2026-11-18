@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `docs/PLAN.md`: the four-phase plan, decisions, acceptance criteria and manual checklists.
+
 ### Phase 2: the PWA
 - `web/`: the artifact's screens (Home, To try, Add, Favourites, History, dish and place pages, editors) ported with their
   wording and styling, now on an offline-first data layer instead of the artifact database.

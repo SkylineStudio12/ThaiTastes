@@ -3,7 +3,7 @@
 Food journal for Greg and Andra, Thailand, Nov 2026 to Apr 2027. Static PWA on GitHub Pages, data in Supabase,
 and an MCP/REST layer so Claude and ChatGPT can read and write the same journal.
 
-Status: **phase 1 (backend, migration) and phase 2 (the PWA) are done.** The AI layer (MCP and REST) and the extras come next; see `CHANGELOG.md`.
+Status: **phase 1 (backend, migration) and phase 2 (the PWA) are done.** The AI layer (MCP and REST) and the extras come next; the full plan is in `docs/PLAN.md`.
 
 ## Layout
 
@@ -13,6 +13,7 @@ web/js/                app.js (screens, ported from the artifact), store.js (off
                        suggestions.js, location.js, main.js (sign-in and boot)
 supabase/migrations/   schema, RLS, storage and realtime, reference data (applied in filename order)
 supabase/tests/        local schema/RLS tests on a throwaway Postgres
+docs/PLAN.md           the plan: phases, decisions, acceptance criteria, manual checklists
 scripts/               migration script and catalogue photo fetch (local only, never deployed) and their tests
 test/                  data-layer and browser tests against an in-memory fake Supabase
 .github/workflows/     test, then deploy web/ to GitHub Pages
@@ -36,7 +37,7 @@ phase 3, as a Supabase Edge Function secret. The export bundle (your journal and
    supabase link --project-ref <ref>
    supabase db push          # applies supabase/migrations
    ```
-   Or paste the four files in `supabase/migrations/` into the Dashboard SQL editor, in order.
+   Or paste the files in `supabase/migrations/` into the Dashboard SQL editor, in order.
 3. Dashboard > Authentication > Providers > Email: keep Email on, turn **off** "Allow new users to sign up".
    Dashboard > Authentication > URL Configuration: set the Site URL to your Pages URL.
 4. Optional: Dashboard > Database > Extensions > enable `pg_cron`, then re-run the last block of
