@@ -28,3 +28,7 @@ file_size_limit = "8MiB"
 
 [realtime]
 enabled = true
+
+# The AI layer checks its own bearer tokens (and must answer OAuth discovery without one), so the gateway JWT check is off.
+[functions.tt]
+verify_jwt = false
