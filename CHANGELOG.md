@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `scripts/fetch-stock-images.mjs` stores the catalogue photos as WebP (quality 80, via `sharp`; run `cd scripts && npm install`
+  first). A rerun converts any earlier JPEG downloads and removes the old files.
+
 - Fix: `scripts/migrate.mjs` failed on a real project with `null value in column "created_at"` for catalogue dishes and
   places. Batch inserts now ask PostgREST to use column defaults for missing fields. The migration test's fake server
   now behaves like PostgREST here, so it catches this.
