@@ -15,7 +15,8 @@
   full OAuth flow, and simultaneous edits from two clients), the consent screen in a browser, the entry point under Deno.
 - Not built: `attach_photo`.
 - CI deploys the backend: on a push to `main`, a `backend` job applies the migrations and deploys the `tt` function
-  (needs the secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`), checks it refuses strangers, and only then
+  (needs the secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_URL`; migrations go through the session pooler, because
+  scoped access tokens cannot use `supabase link`), checks it refuses strangers, and only then
   the app is deployed.
 
 - `docs/PLAN.md`: the four-phase plan, decisions, acceptance criteria and manual checklists.
