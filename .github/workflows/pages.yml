@@ -80,8 +80,8 @@ jobs:
           REF: ${{ steps.cfg.outputs.ref }}
           APP: ${{ steps.cfg.outputs.app }}
         run: |
-          supabase secrets set "APP_URL=$APP" --project-ref "$REF"
-          supabase functions deploy tt --project-ref "$REF" --no-verify-jwt
+          supabase secrets set "APP_URL=$APP" --project-ref "$REF" --yes
+          supabase functions deploy tt --project-ref "$REF" --no-verify-jwt --yes
       - if: steps.cfg.outputs.skip != 'true'
         name: Check that it refuses strangers
         env:
