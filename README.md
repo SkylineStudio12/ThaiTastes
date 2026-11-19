@@ -69,6 +69,9 @@ gets it from Supabase itself; you never set or copy it. The export bundle (your 
    They were stored inside the artifact and are not in the export, so they are fetched again from the Wikimedia Commons
    pages credited in `web/credits.json`. Without them the app shows its drawn icons.
 
+App icon: the source is `design/app-icon.png`; after replacing it, run `node scripts/make-icons.mjs` (needs `cd scripts &&
+npm install` once) and commit `web/icons/`.
+
 Local run: `node test/serve.mjs` serves `web/` on port 8080 (set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the environment).
 No service worker runs on localhost unless you add `?sw=1`.
 
