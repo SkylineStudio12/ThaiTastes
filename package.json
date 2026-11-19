@@ -1,0 +1,13 @@
+{
+  "name": "thaitastes",
+  "private": true,
+  "type": "module",
+  "description": "ThaiTastes: static PWA (web/), Supabase schema (supabase/), migration scripts (scripts/).",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "serve": "node test/serve.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.119.0"
+  }
+}

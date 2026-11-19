@@ -137,3 +137,18 @@ reset role;
 set role anon;
 select pg_temp.ok((select count(*) from storage.objects) = 0, 'anon sees no objects');
 reset role;
+
+-- builtin place: only ig and note are editable by app users; the builtin flag can never be flipped
+insert into public.places (household_id, id, name, stage, builtin, lat, lng) values ('11111111-1111-1111-1111-111111111111', 'bkk-x', 'Catalogue place', 'bkk', true, 1, 2);
+insert into public.places (household_id, id, name, stage, builtin) values ('11111111-1111-1111-1111-111111111111', 'mine', 'My place', 'bkk', false);
+set role authenticated; set request.jwt.claim.role = 'authenticated'; set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
+update public.places set ig = 'https://instagram.com/x', note = 'try the fish', name = 'Hacked', stage = 'cnx', builtin = false where id = 'bkk-x';
+select pg_temp.ok((select (name, stage, builtin, ig, note) = ('Catalogue place', 'bkk', true, 'https://instagram.com/x', 'try the fish') from public.places where id = 'bkk-x'), 'builtin place: only ig/note change');
+update public.places set name = 'Renamed', builtin = true where id = 'mine';
+select pg_temp.ok((select (name, builtin) = ('Renamed', false) from public.places where id = 'mine'), 'custom place editable, cannot become builtin');
+do $$ begin
+  begin update public.places set ig = 'javascript:alert(1)' where id = 'mine'; raise exception 'FAILED: js url accepted'; exception when check_violation then null; end;
+end $$;
+delete from public.places where id = 'bkk-x';
+select pg_temp.ok((select count(*) from public.places where id = 'bkk-x') = 1, 'builtin place survives delete');
+reset role;
