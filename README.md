@@ -75,6 +75,20 @@ Install: iPhone, Safari > Share > Add to Home Screen. Android, Chrome > Install 
 
 ## Deploy the AI layer
 
+**From GitHub (no laptop needed).** Every push to `main` applies the migrations and deploys the function before the app.
+Set this up once, in repo Settings > Secrets and variables > Actions:
+
+- Secret `SUPABASE_ACCESS_TOKEN`: create one at supabase.com/dashboard/account/tokens. It can manage every project in
+  your Supabase account, so keep it only here.
+- Secret `SUPABASE_DB_PASSWORD`: the database password of the project (Project Settings > Database can reset it).
+- Variable `SUPABASE_URL` (already needed for the app). Optional variable `APP_URL` if the app is not at
+  `https://<owner>.github.io/<repo>/`.
+
+Then Actions > "Test and deploy to GitHub Pages" > Run workflow (on `main`), or just merge. Without the two secrets the
+step is skipped with a warning and the app still deploys.
+
+**By hand**, with the Supabase CLI:
+
 1. `supabase db push` (applies `20261118000006_ai_layer.sql`).
 2. `supabase secrets set APP_URL=https://<user>.github.io/<repo>/` (the address of the app, with the trailing slash).
 3. `supabase functions deploy tt`. The gateway JWT check is off for this function (`supabase/config.toml`): it checks

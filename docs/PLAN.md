@@ -137,11 +137,16 @@ tools, the audit log and the rate limits.
 
 ### After phase 3
 
-- [ ] `supabase db push` (migration `20261118000006`). Do this before merging: the new Settings screen reads a column it adds.
-- [ ] Review and merge PR #3 (after PR #2).
-- [ ] `supabase secrets set APP_URL=https://<user>.github.io/<repo>/`.
-- [ ] `supabase functions deploy tt`.
-- [ ] Check that `https://<ref>.supabase.co/functions/v1/tt/mcp` answers 401 in a browser or with `curl -i`.
+Steps 1 to 4 work from a phone browser.
+
+- [ ] Supabase: create an access token at supabase.com/dashboard/account/tokens; note the database password.
+- [ ] GitHub repo Settings > Secrets and variables > Actions: secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`;
+      variables `SUPABASE_URL` and `SUPABASE_ANON_KEY` (Supabase > Project Settings > API).
+- [ ] Merge PR #4. The workflow applies the migrations, deploys the function, checks it answers 401, then deploys the app.
+- [ ] Supabase Auth (dashboard): signups off, Site URL and Redirect URL = the Pages address, `{{ .Token }}` line in the
+      Magic Link template.
+- [ ] On the MacBook: import the journal (`scripts/migrate.mjs`, README "Set up the backend" step 5). This also creates
+      Greg's and Andra's accounts; nobody can sign in before it.
 - [ ] Claude: add the custom connector and approve it (`docs/connect-claude.md`). Andra does the same.
 - [ ] ChatGPT: create a token in Settings and the Custom GPT (`docs/connect-chatgpt.md`).
 - [ ] With the app open on a phone, ask Claude to log an entry. It should appear within seconds, marked as Claude's.
