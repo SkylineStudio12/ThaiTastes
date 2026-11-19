@@ -73,7 +73,7 @@ jobs:
         # No `supabase link`: scoped access tokens cannot get the project_admin_read permission it needs.
         run: |
           supabase migration list --db-url "$SUPABASE_DB_URL"
-          echo y | supabase db push --db-url "$SUPABASE_DB_URL"
+          supabase db push --db-url "$SUPABASE_DB_URL" --yes
       - if: steps.cfg.outputs.skip != 'true'
         name: Deploy the AI layer (Edge Function tt)
         env:
