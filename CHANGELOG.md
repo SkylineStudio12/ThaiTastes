@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Fix: `scripts/migrate.mjs` failed on a real project with `null value in column "created_at"` for catalogue dishes and
+  places. Batch inserts now ask PostgREST to use column defaults for missing fields. The migration test's fake server
+  now behaves like PostgREST here, so it catches this.
+
 ### Phase 3: the AI layer
 - Migration `20261118000006`: the 15 tools as Postgres functions behind one gate, `ai_call()`, which authenticates the
   token hash, rate-limits, runs the tool and writes the audit row in one transaction.

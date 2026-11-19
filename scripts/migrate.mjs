@@ -96,7 +96,9 @@ async function existingIds(table, col = 'id') {
 async function insertMissing(table, rows, key = 'id') {
   const have = await existingIds(table, key);
   const todo = rows.filter((r) => !have.has(r[key])).map((r) => ({ household_id: householdId, ...r }));
-  for (const c of chunks(todo, 100)) unwrap(await sb.from(table).insert(c), `insert ${table}`);
+  // defaultToNull: false sends Prefer: missing=default. Without it PostgREST fills a column that only some rows of the
+  // batch carry (created_at: custom rows have one, catalogue rows do not) with NULL instead of the column default.
+  for (const c of chunks(todo, 100)) unwrap(await sb.from(table).insert(c, { defaultToNull: false }), `insert ${table}`);
   log(`  ${table.padEnd(8)} inserted ${String(todo.length).padStart(3)}, already present ${rows.length - todo.length}`);
 }
 
