@@ -44,31 +44,36 @@ export function createHandler(cfg) {
     if (!token) return deny();
     const hash = await sha256hex(token);
 
-    // A wrong method is only reported to a caller with a valid token; strangers always get 401.
-    if (req.method !== 'POST') {
+    // Anything refused here, before a tool runs, is only explained to a caller with a valid token (asked for at most
+    // once per request). A stranger always gets 401.
+    let checked = false;
+    const gate = async () => {
+      if (checked) return null;
       const a = await cfg.rpc('ai_authenticate', { p_token_hash: hash });
-      if (!a.ok) return deny();
-      if (path === '/mcp' || path.startsWith('/api/')) return json({ error: { code: 'invalid', message: 'Use POST' } }, 405, { allow: 'POST, OPTIONS' });
-      return json({ error: { code: 'not_found', message: 'No such route' } }, 404);
+      if (!a.ok) return a.error.code === 'rate_limited' ? json({ error: a.error }, 429) : deny();
+      checked = true; return null;
+    };
+    const refuse = async (res) => (await gate()) || res;
+
+    if (req.method !== 'POST') {
+      if (path === '/mcp' || path.startsWith('/api/')) return refuse(json({ error: { code: 'invalid', message: 'Use POST' } }, 405, { allow: 'POST, OPTIONS' }));
+      return refuse(json({ error: { code: 'not_found', message: 'No such route' } }, 404));
     }
 
-    if (path === '/mcp') return mcp(cfg, req, hash, deny);
+    if (path === '/mcp') return mcp(cfg, req, hash, deny, refuse);
 
     if (path.startsWith('/api/')) {
       const { text, tooLarge } = await readBody(req);
-      if (tooLarge) return json({ error: { code: 'invalid', message: 'Request too large' } }, 413);
+      if (tooLarge) return refuse(json({ error: { code: 'invalid', message: 'Request too large' } }, 413));
       let args = {};
-      if (text.trim()) { try { args = JSON.parse(text); } catch { return json({ error: { code: 'invalid', message: 'Body must be JSON' } }, 400); } }
+      if (text.trim()) { try { args = JSON.parse(text); } catch { return refuse(json({ error: { code: 'invalid', message: 'Body must be JSON' } }, 400)); } }
       const out = await runTool(cfg, hash, path.slice(5), args);
       if (out.ok) return json(out.result);
       if (out.error.code === 'unauthorized') return deny();
       return json({ error: out.error }, STATUS[out.error.code] || 400);
     }
 
-    // Unknown path, but with a token: still check it, so that nothing here tells a stranger what exists.
-    const a = await cfg.rpc('ai_authenticate', { p_token_hash: hash });
-    if (!a.ok) return deny();
-    return json({ error: { code: 'not_found', message: 'No such route' } }, 404);
+    return refuse(json({ error: { code: 'not_found', message: 'No such route' } }, 404));
   }
 
   return async (req) => {

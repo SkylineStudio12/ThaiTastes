@@ -137,8 +137,8 @@ tools, the audit log and the rate limits.
 
 ### After phase 3
 
+- [ ] `supabase db push` (migration `20261118000006`). Do this before merging: the new Settings screen reads a column it adds.
 - [ ] Review and merge PR #3 (after PR #2).
-- [ ] `supabase db push` (migration `20261118000006`).
 - [ ] `supabase secrets set APP_URL=https://<user>.github.io/<repo>/`.
 - [ ] `supabase functions deploy tt`.
 - [ ] Check that `https://<ref>.supabase.co/functions/v1/tt/mcp` answers 401 in a browser or with `curl -i`.
@@ -163,6 +163,9 @@ Written when the phase is delivered.
   OAuth details under its own path. The MCP specification requires clients to look there, and the client library does.
   If Claude does not, the fallback is Supabase's OAuth server with the database locked against its tokens.
 - ChatGPT's developer-mode MCP route is documented from search results only.
+- ChatGPT's importer has not seen `openapi.json`. If it objects to a schema (nullable fields are written as
+  `type: [..., "null"]`), `supabase/functions/_shared/openapi.js` can be simplified without touching validation.
+- Refresh tokens rotate with no grace period. If Claude ever shows repeated disconnects, look here first.
 - `attach_photo` is not built.
 - iOS does not allow background geolocation for web apps, so until phase 4 the assistants see only the last point
   recorded while the app was open.

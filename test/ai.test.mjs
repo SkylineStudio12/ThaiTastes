@@ -22,6 +22,8 @@ const skip = { skip: false };
 
 before(async () => {
   db = await startDb();
+  // In CI a missing Postgres must fail the run, not quietly skip the whole AI layer.
+  if (!db && process.env.CI) throw new Error('Postgres server binaries not found: the AI layer tests cannot run');
   if (!db) { skip.skip = 'Postgres server binaries not found'; return; }
   await db.pool.query(`
     insert into auth.users (id, email) values ('${GREG}', 'greg@example.test'), ('${STRANGER}', 's@example.test');
@@ -91,6 +93,23 @@ test('without a valid token every route except the OAuth ones answers 401', skip
       await r.arrayBuffer();
     }
   }
+  // Malformed requests must not be explained to a stranger either.
+  const big = JSON.stringify({ note: 'x'.repeat(120000) });
+  const bodies = ['{not json', big, '[]', JSON.stringify(new Array(21).fill({ jsonrpc: '2.0', id: 1, method: 'ping' })),
+    JSON.stringify({ method: 'tools/call', params: { name: 'get_context' } }), JSON.stringify({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'get_context' } }),
+    JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: {} }), JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'nope' } }),
+    JSON.stringify([{ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'get_context' } }, 5]), JSON.stringify({ dish_id: 'n1', spice: 99 }), 'null', '5'];
+  for (const p of ['/mcp', '/api/add_entry', '/api/nope']) for (const body of bodies) for (const auth of ['Bearer nope', `Bearer ${T.revoked}`]) {
+    const r = await fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json', authorization: auth }, body });
+    assert.equal(r.status, 401, `POST ${p} ${body.slice(0, 60)} with ${auth}`);
+    await r.arrayBuffer();
+  }
+  // The same malformed requests with a valid token get a proper answer.
+  await clearLimits();
+  const good = (p, body) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${T.claude}` }, body });
+  assert.equal((await good('/mcp', '{not json')).status, 400); assert.equal((await good('/mcp', big)).status, 413); assert.equal((await good('/mcp', '[]')).status, 400);
+  assert.equal((await good('/mcp', 'null')).status, 200); assert.equal((await good('/api/add_entry', 'null')).status, 400);
+  assert.equal((await good('/mcp', JSON.stringify({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'get_context' } }))).status, 202);
   for (const p of ['/.well-known/oauth-protected-resource', '/.well-known/openid-configuration', '/.well-known/oauth-authorization-server', '/jwks'])
     assert.equal((await fetch(base + p)).status, 200, p);
   assert.equal((await fetch(base + '/nope', { headers: { authorization: `Bearer ${T.claude}` } })).status, 404);

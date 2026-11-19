@@ -57,18 +57,22 @@ async function handleMessage(cfg, tokenHash, msg) {
   }
 }
 
-// `unauthorized` is the 401 response to use when the token turns out to be bad.
-export async function mcp(cfg, req, tokenHash, unauthorized) {
+// `unauthorized()` is the 401 response for a bad token. `refuse(res)` returns `res` only if the token is valid.
+// Every message is answered only after the token has been checked: tool calls by ai_call itself, everything else
+// (including malformed tool calls, which never reach ai_call) by one up-front check.
+const isRealToolCall = (m) => m && typeof m === 'object' && m.jsonrpc === '2.0' && m.method === 'tools/call' && m.id !== undefined
+  && m.params && typeof m.params.name === 'string';
+
+export async function mcp(cfg, req, tokenHash, unauthorized, refuse) {
   const { text, tooLarge } = await readBody(req);
-  if (tooLarge) return json(rpcError(null, -32600, 'Request too large'), 413);
-  let body; try { body = JSON.parse(text); } catch { return json(rpcError(null, -32700, 'Parse error'), 400); }
+  if (tooLarge) return refuse(json(rpcError(null, -32600, 'Request too large'), 413));
+  let body; try { body = JSON.parse(text); } catch { return refuse(json(rpcError(null, -32700, 'Parse error'), 400)); }
   const batch = Array.isArray(body);
   const msgs = batch ? body : [body];
-  if (!msgs.length || msgs.length > 20) return json(rpcError(null, -32600, 'Invalid request'), 400);
-  // Anything other than a tool call does not reach the database through ai_call, so check the token here.
-  if (!msgs.some((m) => m && m.method === 'tools/call')) {
-    const a = await cfg.rpc('ai_authenticate', { p_token_hash: tokenHash });
-    if (!a.ok) return a.error.code === 'rate_limited' ? json(rpcError(null, -32000, a.error.message), 429) : unauthorized();
+  if (!msgs.length || msgs.length > 20) return refuse(json(rpcError(null, -32600, 'Invalid request'), 400));
+  if (!msgs.every(isRealToolCall)) {
+    const stop = await refuse(null);
+    if (stop) return stop;
   }
   const out = [];
   for (const m of msgs) {
