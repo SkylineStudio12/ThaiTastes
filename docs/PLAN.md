@@ -1,6 +1,6 @@
 # ThaiTastes migration plan
 
-The plan for moving ThaiTastes from a Claude.ai artifact to an app Greg and Andra own. Status as of 2026-11-18.
+The plan for moving ThaiTastes from a Claude.ai artifact to an app Greg and Andra own. Status as of 2026-11-19.
 
 ## Goal
 
@@ -19,7 +19,7 @@ data, as a PWA that:
 | Frontend | Static PWA on GitHub Pages. Plain HTML, CSS and ES modules, no build step. |
 | Backend | Supabase: Postgres, Auth (magic link, signups off), Storage (private `photos` bucket), Realtime. |
 | AI access | Supabase Edge Functions: a remote MCP server (streamable HTTP) for Claude, and a REST API with an OpenAPI 3.1 spec for ChatGPT Custom GPT Actions. Both call one shared service layer. |
-| AI auth | Per-client bearer tokens, stored hashed (sha256), created, rotated and revoked from Settings. OAuth 2.1 or static tokens is decided at the start of phase 3. |
+| AI auth | Per-client bearer tokens, stored hashed (sha256), revoked from Settings. Static tokens for ChatGPT Actions and Claude Code; a built-in OAuth 2.1 sign-in issues the same kind of token to the Claude app. |
 | Deploy | GitHub Actions: tests, then `web/` to Pages with the public config injected from repository Variables. |
 
 Rules that hold throughout:
@@ -61,11 +61,10 @@ Each phase ends with a stop, a demo, and a checklist of what the owners must do 
 - Sign-in, Settings (sync status, location, AI tokens, theme), suggestions inbox.
 - Pages deploy workflow; data-layer and browser tests.
 
-### Phase 3: the AI layer. Pending
+### Phase 3: the AI layer. Done, in review (PR #3)
 
-- Shared service layer used by both paths.
-- MCP server (Edge Function, streamable HTTP) and REST API with an OpenAPI 3.1 spec.
-- Tools, the same on both paths:
+- 15 tools, defined once (`supabase/functions/_shared/tools.js`) and served both as MCP (`/mcp`) and REST (`/api/<tool>`)
+  with an OpenAPI 3.1 document.
 
   | Read | Write |
   | --- | --- |
@@ -76,13 +75,24 @@ Each phase ends with a stop, a demo, and a checklist of what the owners must do 
   | `list_places` | `add_place` |
   | `get_stats` | `toggle_fav` |
   | `list_suggestions` | `add_suggestion` |
-  | `get_latest_location` | `attach_photo` (optional) |
+  | `get_latest_location` | |
 
-- Every write records `author` and `source_client`, and lands in `audit_log`.
-- Bearer token check against the hashed tokens, and rate limiting per client.
-- OAuth decision: check what Claude custom connectors and ChatGPT developer mode currently require, choose OAuth 2.1
-  or static tokens, and record which and why.
+- The tools run inside Postgres behind `ai_call()`: token check, rate limit (60 calls and 20 writes a minute per
+  connection), the write, and its `audit_log` row, in one transaction.
 - `docs/connect-claude.md` and `docs/connect-chatgpt.md`.
+- Deferred: `attach_photo` (optional in the spec). Photos are added in the app.
+
+**The OAuth decision.** Checked on 2026-11-18:
+
+- The Claude app's custom connectors accept OAuth or no authentication. Sending a fixed header is a beta for a
+  limited set of organizations, and this account does not have it. So Claude needs OAuth.
+- ChatGPT Custom GPT Actions accept a fixed Bearer key. Claude Code accepts a fixed header.
+- ChatGPT's own MCP connectors take OAuth; whether write tools are allowed depends on the plan (not verified).
+
+Choice: keep one kind of credential, the hashed token in `ai_clients`, and add a minimal OAuth 2.1 server in the Edge
+Function that hands one out after a household member approves in the app. Supabase's built-in OAuth server was
+rejected: its tokens are full user sessions, so an assistant holding one could call the database directly, around the
+tools, the audit log and the rate limits.
 
 ### Phase 4: extras. Pending
 
@@ -97,9 +107,9 @@ Each phase ends with a stop, a demo, and a checklist of what the owners must do 
 | --- | --- |
 | A fresh clone, the README steps and your Supabase keys give a working deploy; no secrets in git history. | Workflow and README written. Not yet run against a real project. |
 | Migration counts are exact and every photo opens. | The script enforces this (85 entries, 62 dishes, 28 places, 16 favs, 35 photos). Passed against a fake Supabase; the real run is yours. |
-| An MCP-added entry appears live in the open PWA with `author` set. | Phase 3. The PWA side (realtime merge) is tested against a fake server only. |
-| Concurrent edits from two AI clients never silently overwrite each other. | Phase 3. The `updated_at` guard exists in the schema and the PWA. |
-| Unauthenticated requests to any table or function are rejected. | Tables: covered by the local RLS tests. Functions: phase 3. |
+| An MCP-added entry appears live in the open PWA with `author` set. | `author` and `source_client` are set and tested on a real Postgres. The live update needs a real project: on your checklist. |
+| Concurrent edits from two AI clients never silently overwrite each other. | Tested on a real Postgres with simultaneous requests from two clients: one is applied, the other gets `conflict` and the current record. |
+| Unauthenticated requests to any table or function are rejected. | Tables and database functions: local RLS and privilege tests. Edge Function: every route except the OAuth ones answers 401 (tested). |
 | Lighthouse PWA install criteria pass and the app works offline. | Offline reload and queued sync pass in a Chromium test. Installability checked through Chrome's own check (no errors); Lighthouse no longer has a PWA category. Not yet tested on a phone. |
 | UI is English, with Thai script where the data has it. | Done. |
 
@@ -125,9 +135,22 @@ Each phase ends with a stop, a demo, and a checklist of what the owners must do 
 - [ ] On both phones: sign in (link and code), add to Home Screen, take a photo, add an entry in airplane mode
       and watch it sync, turn on location sharing.
 
-### After phase 3 and phase 4
+### After phase 3
 
-Written when each phase is delivered.
+- [ ] `supabase db push` (migration `20261118000006`). Do this before merging: the new Settings screen reads a column it adds.
+- [ ] Review and merge PR #3 (after PR #2).
+- [ ] `supabase secrets set APP_URL=https://<user>.github.io/<repo>/`.
+- [ ] `supabase functions deploy tt`.
+- [ ] Check that `https://<ref>.supabase.co/functions/v1/tt/mcp` answers 401 in a browser or with `curl -i`.
+- [ ] Claude: add the custom connector and approve it (`docs/connect-claude.md`). Andra does the same.
+- [ ] ChatGPT: create a token in Settings and the Custom GPT (`docs/connect-chatgpt.md`).
+- [ ] With the app open on a phone, ask Claude to log an entry. It should appear within seconds, marked as Claude's.
+- [ ] Ask both assistants to change the same entry; neither change should vanish.
+- [ ] Revoke one connection in Settings and confirm that assistant is refused.
+
+### After phase 4
+
+Written when the phase is delivered.
 
 ## Known gaps
 
@@ -135,5 +158,14 @@ Written when each phase is delivered.
   are proven only against a fake server and a local Postgres.
 - The catalogue photos (about 64 Wikimedia images) were stored inside the artifact and are not in the export. The fetch
   script exists but has not been run; until then the app shows its drawn icons.
+- The OAuth sign-in is tested with the official MCP client library, not with Claude or ChatGPT themselves. One
+  specific risk: an Edge Function cannot serve `/.well-known/...` at the top of its host, so the function publishes its
+  OAuth details under its own path. The MCP specification requires clients to look there, and the client library does.
+  If Claude does not, the fallback is Supabase's OAuth server with the database locked against its tokens.
+- ChatGPT's developer-mode MCP route is documented from search results only.
+- ChatGPT's importer has not seen `openapi.json`. If it objects to a schema (nullable fields are written as
+  `type: [..., "null"]`), `supabase/functions/_shared/openapi.js` can be simplified without touching validation.
+- Refresh tokens rotate with no grace period. If Claude ever shows repeated disconnects, look here first.
+- `attach_photo` is not built.
 - iOS does not allow background geolocation for web apps, so until phase 4 the assistants see only the last point
   recorded while the app was open.

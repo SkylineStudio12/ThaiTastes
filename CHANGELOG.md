@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Phase 3: the AI layer
+- Migration `20261118000006`: the 15 tools as Postgres functions behind one gate, `ai_call()`, which authenticates the
+  token hash, rate-limits, runs the tool and writes the audit row in one transaction.
+- Edge Function `tt`: MCP over streamable HTTP (`/mcp`) and REST (`/api/<tool>`), both generated from one tool list.
+- Minimal OAuth 2.1 server for the Claude app (discovery, dynamic registration, PKCE, rotating refresh tokens), issuing
+  the same hashed tokens as Settings. Consent screen in the app.
+- `update_entry` and `rate_entry` refuse a stale `updated_at` and return the current record.
+- `openapi.json` (OpenAPI 3.1) is built at deploy for ChatGPT Custom GPT Actions.
+- `docs/connect-claude.md`, `docs/connect-chatgpt.md`.
+- Tests: SQL assertions, the handler end to end on a real local Postgres (including the official MCP client doing the
+  full OAuth flow, and simultaneous edits from two clients), the consent screen in a browser, the entry point under Deno.
+- Not built: `attach_photo`.
+
 - `docs/PLAN.md`: the four-phase plan, decisions, acceptance criteria and manual checklists.
 
 ### Phase 2: the PWA

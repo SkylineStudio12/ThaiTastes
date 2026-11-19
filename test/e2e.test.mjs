@@ -159,3 +159,56 @@ test('dark mode and installability', { skip }, async () => {
   assert.ok(manifest.icons.some((i) => i.sizes === '192x192') && manifest.icons.some((i) => i.sizes === '512x512') && manifest.icons.some((i) => i.purpose === 'maskable'));
   await e.close();
 });
+
+test('connecting an assistant: consent screen allows, denies, and handles an expired request', { skip }, async () => {
+  const e = await env();
+  const { page, fake } = e;
+  const RID = '9d2f6c1e-1111-4222-8333-444455556666';
+  const calls = [];
+  fake.state.rpc.oauth_request_info = (a) => { calls.push(['info', a]); return { client_name: 'Claude', redirect_uri: 'https://claude.ai/api/mcp/auth_callback' }; };
+  fake.state.rpc.approve_oauth_request = (a) => { calls.push(['approve', a]); return { redirect_uri: 'https://claude.ai/api/mcp/auth_callback', code: 'c0de', state: 'st 8' }; };
+  fake.state.rpc.deny_oauth_request = (a) => { calls.push(['deny', a]); return { redirect_uri: 'https://claude.ai/api/mcp/auth_callback', state: 'st 8' }; };
+  // The assistant's callback page is outside the test: catch the navigation instead of following it.
+  let landed = null;
+  await page.route('https://claude.ai/**', (r) => { landed = new URL(r.request().url()); r.fulfill({ status: 200, contentType: 'text/html', body: 'back at the assistant' }); });
+
+  await page.goto(e.base + '?authorize=' + RID);
+  await page.waitForSelector('#authz-author');
+  assert.equal(new URL(page.url()).search, '', 'the request id is taken out of the address bar');
+  assert.equal(await page.isVisible('#app'), false, 'the journal stays closed until the request is answered');
+  const text = await page.textContent('#login-card');
+  assert.match(text, /Claude wants to read your food journal/); assert.match(text, /claude\.ai/); assert.match(text, /signed in as Greg/);
+  assert.equal(await page.inputValue('#authz-author'), 'claude');
+  await page.click('#login-card button.primary');
+  assert.ok(await until(() => landed), 'browser returns to the assistant');
+  assert.equal(landed.pathname, '/api/mcp/auth_callback');
+  assert.equal(landed.searchParams.get('code'), 'c0de'); assert.equal(landed.searchParams.get('state'), 'st 8');
+  assert.equal(landed.searchParams.get('iss'), fake.url + '/functions/v1/tt');
+  assert.deepEqual(calls.at(-1), ['approve', { p_id: RID, p_author: 'claude' }]);
+
+  // Deny
+  landed = null;
+  await page.goto(e.base + '?authorize=' + RID);
+  await page.waitForSelector('#authz-author');
+  await page.click('#login-card button.secondary');
+  assert.ok(await until(() => landed));
+  assert.equal(landed.searchParams.get('error'), 'access_denied'); assert.equal(landed.searchParams.get('code'), null);
+
+  // Expired or already answered: say so, then open the journal as usual.
+  fake.state.rpc.oauth_request_info = () => null;
+  await page.goto(e.base + '?authorize=' + RID);
+  await page.waitForFunction(() => /expired or was already answered/.test(document.querySelector('#login-card')?.textContent || ''));
+  await page.click('#login-card button.primary');
+  await page.waitForSelector('#sum .sum-top');
+  // The answered request is forgotten: a normal visit goes straight to the journal.
+  await page.goto(e.base);
+  await page.waitForSelector('#sum .sum-top');
+  assert.equal(await page.isVisible('#login'), false);
+
+  // Settings shows the connector address.
+  await page.click('button[aria-label=Settings]');
+  await page.waitForSelector('.settings');
+  assert.match(await page.textContent('.settings'), new RegExp(fake.url.replace(/[.:/]/g, '\\$&') + '/functions/v1/tt/mcp'));
+  assert.deepEqual(e.errors, []);
+  await e.close();
+});

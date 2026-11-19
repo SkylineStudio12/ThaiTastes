@@ -23,7 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Data layer tests (against a fake Supabase)
+      - name: Data layer tests (fake Supabase) and AI layer tests (throwaway Postgres)
         run: npm test
       - name: Migration script tests
         run: cd scripts && npm ci && node --test
@@ -57,6 +57,7 @@ jobs:
             require("fs").writeFileSync("web/js/config.js", `export const SUPABASE_URL = ${JSON.stringify(u)};\nexport const SUPABASE_ANON_KEY = ${JSON.stringify(k)};\nexport const BUILD = ${JSON.stringify(sha.slice(0, 7))};\n`);
           '
           sed -i "s/__BUILD__/${GITHUB_SHA}/" web/sw.js
+          node scripts/build-openapi.mjs "$SUPABASE_URL"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
