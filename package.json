@@ -8,6 +8,8 @@
     "serve": "node test/serve.mjs"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "2.119.0"
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@supabase/supabase-js": "2.119.0",
+    "pg": "^8.23.1"
   }
 }

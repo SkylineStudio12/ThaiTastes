@@ -19,7 +19,7 @@ async function copy(text, label) {
 }
 
 async function loadClients(ctx) {
-  const { data, error } = await ctx.sb.from('ai_clients').select('id, name, author, token_prefix, created_at, last_used_at, revoked_at').order('created_at');
+  const { data, error } = await ctx.sb.from('ai_clients').select('id, name, author, token_prefix, created_at, last_used_at, revoked_at, oauth_client_id').order('created_at');
   state.error = error ? 'Could not load the connections (' + error.message + ').' : '';
   if (!error) state.clients = data;
   draw(ctx);
@@ -91,7 +91,7 @@ function draw(ctx) {
   const list = state.clients;
   fill(parts.ai, 
     el('div', { class: 'card-h' }, el('h3', { text: 'AI assistants' })),
-    el('p', { class: 'desc', text: 'Each assistant gets its own secret token. Paste it into the connector settings of Claude or ChatGPT (see docs/connect-claude.md and docs/connect-chatgpt.md). A token is shown only once. Revoke it here and that assistant is locked out at once.' }),
+    el('p', { class: 'desc', text: 'Claude connects by signing in: add the connector address below in Claude and approve it here. ChatGPT and Claude Code use a secret token you create here; it is shown only once. Steps are in docs/connect-claude.md and docs/connect-chatgpt.md. Revoke a connection and that assistant is locked out at once.' }),
     fresh ? el('div', { class: 'token-box', role: 'status' },
       el('b', { text: 'Token for ' + fresh.name }),
       el('code', { class: 'token', text: fresh.token }),
@@ -102,10 +102,10 @@ function draw(ctx) {
     state.error ? el('p', { class: 'err', text: state.error }) : null,
     !online && !list ? el('p', { class: 'desc', text: 'Connect to the internet to manage tokens.' }) : null,
     list && list.length ? el('ul', { class: 'clients' }, list.map((c) => el('li', { class: c.revoked_at ? 'revoked' : '' },
-      el('div', null, el('b', { text: c.name }), el('span', { class: 'desc', text: ' · ' + (c.author === 'chatgpt' ? 'ChatGPT' : 'Claude') + ' · ' + c.token_prefix + '…' }),
+      el('div', null, el('b', { text: c.name }), el('span', { class: 'desc', text: ' · ' + (c.author === 'chatgpt' ? 'ChatGPT' : 'Claude') + ' · ' + (c.oauth_client_id ? 'signed in' : c.token_prefix + '…') }),
         el('div', { class: 'desc', text: c.revoked_at ? 'Revoked ' + ago(Date.parse(c.revoked_at)) : 'Last used ' + (c.last_used_at ? ago(Date.parse(c.last_used_at)) : 'never') })),
       el('div', { class: 'row-btns' },
-        el('button', { type: 'button', class: 'secondary sm', disabled: state.busy || !online, onclick: async () => {
+        c.oauth_client_id ? null : el('button', { type: 'button', class: 'secondary sm', disabled: state.busy || !online, onclick: async () => {
           if (!confirm('Replace the token for ' + c.name + '? The old one stops working immediately.')) return;
           const t = await rpc(ctx, 'rotate_ai_client', { p_id: c.id }); if (t) { state.fresh = { name: c.name, token: t }; draw(ctx); }
         } }, 'Rotate'),
@@ -126,7 +126,8 @@ function draw(ctx) {
         el('input', { id: 'ai-name', name: 'name', class: 'inp', type: 'text', maxlength: '60', placeholder: 'e.g. Claude on my phone', autocomplete: 'off', disabled: !online }),
         el('select', { name: 'author', class: 'inp narrow', 'aria-label': 'Assistant' }, el('option', { value: 'claude', text: 'Claude' }), el('option', { value: 'chatgpt', text: 'ChatGPT' }))),
       el('div', { class: 'inline-actions' }, el('button', { type: 'submit', class: 'primary', disabled: state.busy || !online }, 'Create token'))),
-    ctx.mcpUrl ? el('p', { class: 'desc' }, 'Connector address: ', el('code', { text: ctx.mcpUrl })) : null);
+    ctx.mcpUrl ? el('p', { class: 'desc' }, 'Connector address (MCP): ', el('code', { class: 'token', text: ctx.mcpUrl })) : null,
+    ctx.mcpUrl ? el('div', { class: 'inline-actions' }, el('button', { type: 'button', class: 'secondary', onclick: () => copy(ctx.mcpUrl, 'Address') }, 'Copy address')) : null);
 
   // ---- appearance
   let theme = 'auto'; try { theme = localStorage.getItem(THEME_KEY) || 'auto'; } catch {}

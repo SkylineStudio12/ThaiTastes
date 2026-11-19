@@ -8,7 +8,7 @@ const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'credits.json', 'images/manifest.json',
   'css/app.css',
   'js/main.js', 'js/app.js', 'js/store.js', 'js/db.js', 'js/mapping.js', 'js/catalog-order.js', 'js/dom.js',
-  'js/settings.js', 'js/suggestions.js', 'js/location.js', 'js/config.js', 'js/theme.js', 'js/supabase.umd.js',
+  'js/settings.js', 'js/suggestions.js', 'js/authorize.js', 'js/location.js', 'js/config.js', 'js/theme.js', 'js/supabase.umd.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png',
 ];
 

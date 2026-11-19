@@ -3,7 +3,7 @@
 Food journal for Greg and Andra, Thailand, Nov 2026 to Apr 2027. Static PWA on GitHub Pages, data in Supabase,
 and an MCP/REST layer so Claude and ChatGPT can read and write the same journal.
 
-Status: **phase 1 (backend, migration) and phase 2 (the PWA) are done.** The AI layer (MCP and REST) and the extras come next; the full plan is in `docs/PLAN.md`.
+Status: **phases 1 to 3 are done** (backend and migration, the PWA, the AI layer). The extras come next; the full plan is in `docs/PLAN.md`.
 
 ## Layout
 
@@ -12,8 +12,9 @@ web/                   the PWA: plain HTML, CSS and ES modules. This folder is w
 web/js/                app.js (screens, ported from the artifact), store.js (offline-first data layer), settings.js,
                        suggestions.js, location.js, main.js (sign-in and boot)
 supabase/migrations/   schema, RLS, storage and realtime, reference data (applied in filename order)
-supabase/tests/        local schema/RLS tests on a throwaway Postgres
-docs/PLAN.md           the plan: phases, decisions, acceptance criteria, manual checklists
+supabase/functions/    the AI layer: tt/ (Edge Function entry) and _shared/ (tools, MCP, REST, OAuth)
+supabase/tests/        local schema, RLS and AI-layer tests on a throwaway Postgres
+docs/                  PLAN.md (phases, decisions, checklists), connect-claude.md, connect-chatgpt.md
 scripts/               migration script and catalogue photo fetch (local only, never deployed) and their tests
 test/                  data-layer and browser tests against an in-memory fake Supabase
 .github/workflows/     test, then deploy web/ to GitHub Pages
@@ -25,8 +26,8 @@ No build step. `web/` is served exactly as it is in git (only `js/config.js` is 
 ## Secrets rule
 
 The repo is public. Only the Supabase URL and the **anon** key may ever appear in frontend code, and they are safe only
-because RLS is on for every table. The **service-role** key lives in `.env.migrate` on your machine (gitignored) and, in
-phase 3, as a Supabase Edge Function secret. The export bundle (your journal and photos) is also gitignored.
+because RLS is on for every table. The **service-role** key lives in `.env.migrate` on your machine (gitignored). The Edge Function
+gets it from Supabase itself; you never set or copy it. The export bundle (your journal and photos) is also gitignored.
 
 ## Set up the backend
 
@@ -72,6 +73,53 @@ No service worker runs on localhost unless you add `?sw=1`.
 
 Install: iPhone, Safari > Share > Add to Home Screen. Android, Chrome > Install app.
 
+## Deploy the AI layer
+
+**From GitHub (no laptop needed).** Every push to `main` applies the migrations and deploys the function before the app.
+Set this up once, in repo Settings > Secrets and variables > Actions:
+
+- Secret `SUPABASE_ACCESS_TOKEN`: create one at supabase.com/dashboard/account/tokens. It can manage every project in
+  your Supabase account, so keep it only here.
+- Secret `SUPABASE_DB_PASSWORD`: the database password of the project (Project Settings > Database can reset it).
+- Variable `SUPABASE_URL` (already needed for the app). Optional variable `APP_URL` if the app is not at
+  `https://<owner>.github.io/<repo>/`.
+
+Then Actions > "Test and deploy to GitHub Pages" > Run workflow (on `main`), or just merge. Without the two secrets the
+step is skipped with a warning and the app still deploys.
+
+**By hand**, with the Supabase CLI:
+
+1. `supabase db push` (applies `20261118000006_ai_layer.sql`).
+2. `supabase secrets set APP_URL=https://<user>.github.io/<repo>/` (the address of the app, with the trailing slash).
+3. `supabase functions deploy tt`. The gateway JWT check is off for this function (`supabase/config.toml`): it checks
+   its own tokens.
+4. Check: `curl -i https://<ref>.supabase.co/functions/v1/tt/mcp` answers `401`, and
+   `https://<ref>.supabase.co/functions/v1/tt/.well-known/openid-configuration` answers JSON.
+5. Connect the assistants: `docs/connect-claude.md` and `docs/connect-chatgpt.md`.
+
+Redeploy the function (step 3) whenever `supabase/functions/` changes.
+
+## The AI layer
+
+- **One tool list, two doors.** `supabase/functions/_shared/tools.js` defines 15 tools. The MCP endpoint (`/mcp`), the
+  REST endpoint (`/api/<tool>`) and `openapi.json` are all generated from it.
+- **The work happens in Postgres.** The function passes the hash of the bearer token to `ai_call()`. That one database
+  call finds the client and its household, applies the rate limit, runs the tool, and writes the audit row in the same
+  transaction. No query in the function can reach another household, because no query in the function names one.
+- **Tokens.** Every assistant connection is a row in `ai_clients` holding only a sha256 hash. A token comes from
+  Settings (static, for ChatGPT Actions and Claude Code) or from the OAuth sign-in (for the Claude app: one hour, with
+  a rotating refresh token). Both kinds are revoked in Settings.
+- **OAuth.** The Claude app only accepts OAuth, so the function is also a minimal OAuth 2.1 server: discovery
+  documents, dynamic client registration, authorization code with PKCE, refresh. Consent is a screen in the app.
+  Supabase's own OAuth server was not used because its tokens are full user sessions, which would let an assistant
+  go around the tools, the audit log and the rate limits.
+- **Concurrent edits.** `update_entry` needs the `updated_at` the caller last read. If the entry moved on, nothing is
+  written and the current record comes back with `conflict: true`.
+- **Limits.** 60 calls a minute per connection, 20 of them writes; request bodies up to 100 kB.
+- **Open routes** (no token): the OAuth discovery documents, `/register`, `/authorize`, `/token`. Everything else
+  answers `401` without a valid token.
+- `attach_photo` is not built yet; photos are added in the app.
+
 ## How the app behaves
 
 - **Offline first.** Rows are cached in IndexedDB; the app shell is cached by a service worker. Anything you add or
@@ -110,11 +158,12 @@ Install: iPhone, Safari > Share > Add to Home Screen. Android, Chrome > Install 
 ## Tests
 
 ```sh
-npm ci && npm test                                              # data layer against a fake Supabase; browser tests too if Playwright is installed
+npm ci && npm test                                              # data layer (fake Supabase), AI layer (throwaway Postgres), browser tests if Playwright is installed
 BUNDLE_DIR=/path/to/thaitastes-export npm test                  # same, with your real data in the browser tests
-bash supabase/tests/run-local.sh                                # schema + RLS on a local Postgres (needs postgresql server binaries)
+bash supabase/tests/run-local.sh                                # schema, RLS and AI functions on a local Postgres (needs postgresql server binaries)
+DENO=$(which deno) node --test test/deno.test.mjs               # the Edge Function entry under Deno
 cd scripts && BUNDLE_DIR=/path/to/thaitastes-export node --test # transform tests + migration against a fake Supabase
 ```
 
 The fake Supabase in `test/` is not Supabase. Realtime, Auth emails and Storage policies are only proven against a real
-project: see the checklist in the pull request.
+project, and the OAuth sign-in only against Claude and ChatGPT themselves: see the checklists in `docs/PLAN.md`.
