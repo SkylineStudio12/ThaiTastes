@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Applies all migrations to a throwaway local Postgres (with Supabase stubs) and runs rls.test.sql.
+# Applies all migrations to a throwaway local Postgres (with Supabase stubs) and runs rls.test.sql and ai.test.sql.
 # Needs the postgresql-16 server binaries (Debian/Ubuntu: apt install postgresql). Run as root or any user.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -14,4 +14,5 @@ run -d postgres -f "$PWD/supabase/tests/stub.sql"
 for f in supabase/migrations/*.sql; do echo "apply $f"; run -d postgres -f "$PWD/$f"; done
 echo "re-apply reference data (idempotent)"; run -d postgres -f "$PWD/supabase/migrations/20261118000004_reference_data.sql"
 run -d postgres -o /dev/null -f "$PWD/supabase/tests/rls.test.sql"
+run -d postgres -o /dev/null -f "$PWD/supabase/tests/ai.test.sql"
 echo "ALL LOCAL SCHEMA TESTS PASSED"
