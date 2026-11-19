@@ -64,7 +64,8 @@ gets it from Supabase itself; you never set or copy it. The export bundle (your 
    to the email. The installed iPhone app cannot receive the link (Safari opens it, with separate storage), so
    the sign-in screen also accepts the 6-digit code.
 5. Push to `main`. The workflow runs the tests, writes `web/js/config.js` (URL, anon key, build id), and deploys.
-6. Catalogue photos (optional, run once): `node scripts/fetch-stock-images.mjs`, then commit `web/images/`.
+6. Catalogue photos (optional, run once): `cd scripts && npm install && cd ..`, then `node scripts/fetch-stock-images.mjs`, then
+   commit `web/images/`. They are stored as WebP (quality 80), about 1.5 to 2 MB in all.
    They were stored inside the artifact and are not in the export, so they are fetched again from the Wikimedia Commons
    pages credited in `web/credits.json`. Without them the app shows its drawn icons.
 
