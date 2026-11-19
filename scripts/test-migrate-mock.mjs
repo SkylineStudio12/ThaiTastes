@@ -48,8 +48,18 @@ function startFake() {
           return send(200, rows, hdr);
         }
         if (req.method === 'POST') {
-          const items = [].concat(body());
+          let items = [].concat(body());
           const merge = (req.headers.prefer ?? '').includes('merge-duplicates');
+          // Like PostgREST: a batch is inserted with the union of its keys as the column list, and a key a row lacks
+          // becomes NULL, not the column default, unless the request says Prefer: missing=default.
+          if (!(req.headers.prefer ?? '').includes('missing=default')) {
+            const cols = [...new Set(items.flatMap((it) => Object.keys(it)))];
+            items = items.map((it) => Object.fromEntries(cols.map((c) => [c, it[c] ?? null])));
+          }
+          const NOT_NULL = { dishes: ['created_at'], places: ['created_at'], entries: ['created_at'], favs: ['created_at'] };
+          for (const it of items) for (const c of NOT_NULL[t] ?? []) {
+            if (c in it && it[c] === null) return send(400, { code: '23502', message: `null value in column "${c}" of relation "${t}" violates not-null constraint` });
+          }
           const out = [];
           for (const it of items) {
             const row = { ...it };
@@ -79,8 +89,9 @@ function startFake() {
   return new Promise((r) => server.listen(0, () => r({ server, db, users, objects, port: server.address().port })));
 }
 
-test('migrate.mjs: real run is verified, and a second run changes nothing', { skip: !BUNDLE && 'set BUNDLE_DIR to run' }, async () => {
+test('migrate.mjs: real run is verified, and a second run changes nothing', { skip: !BUNDLE && 'set BUNDLE_DIR to run' }, async (t) => {
   const f = await startFake();
+  t.after(() => f.server.close());
   const envFile = join(mkdtempSync(join(tmpdir(), 'ttenv-')), 'env');
   writeFileSync(envFile, `SUPABASE_URL=http://127.0.0.1:${f.port}\nSUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiJ9.e30.x\nGREG_EMAIL=g@example.test\nANDRA_EMAIL=a@example.test\n`);
   const run = () => new Promise((res) => {
@@ -113,5 +124,4 @@ test('migrate.mjs: real run is verified, and a second run changes nothing', { sk
   const r3 = await new Promise((res) => { const c = spawn('node', ['migrate.mjs', '--bundle', BUNDLE, '--env', envFile, '--verify-only'], { cwd: new URL('.', import.meta.url).pathname }); let out = ''; c.stderr.on('data', (d) => (out += d)); c.stdout.on('data', (d) => (out += d)); c.on('close', (code) => res({ code, out })); });
   assert.notEqual(r3.code, 0);
   assert.match(r3.out, /MISMATCH: entries: got 84, expected 85/);
-  f.server.close();
 });
