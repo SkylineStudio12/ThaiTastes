@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- New app icon (sticky rice and mango), built from `design/app-icon.png` by `scripts/make-icons.mjs`: opaque full-bleed
+  versions for iOS and Android maskable, rounded versions for the rest. The unused `icons/icon.svg` is removed.
+
 - `scripts/fetch-stock-images.mjs` stores the catalogue photos as WebP (quality 80, via `sharp`; run `cd scripts && npm install`
   first). A rerun converts any earlier JPEG downloads and removes the old files.
 
