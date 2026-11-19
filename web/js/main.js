@@ -6,8 +6,12 @@ import { init as initApp } from './app.js';
 import * as loc from './location.js';
 import { applyTheme, resetSettings } from './settings.js';
 import { el, toast } from './dom.js';
+import * as authz from './authorize.js';
 
 applyTheme();
+authz.capture();
+// The AI layer (Edge Function). Its /mcp address is what goes into Claude; it is also the OAuth issuer.
+const AI_BASE = SUPABASE_URL ? SUPABASE_URL.replace(/\/+$/, '') + '/functions/v1/tt' : '';
 const MEMBER_KEY = 'tt-member';
 const read = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -21,7 +25,7 @@ function showLogin(msg) {
     box.append(el('h1', { text: 'ThaiTastes' }), el('p', { class: 'err', text: 'Not configured yet. Set SUPABASE_URL and SUPABASE_ANON_KEY (see the README, "Deploy").' }));
     return;
   }
-  const status = el('p', { class: 'status', role: 'status', text: msg || '' });
+  const status = el('p', { class: 'status', role: 'status', text: msg || (authz.pending() ? 'Sign in to connect the assistant.' : '') });
   const email = el('input', { id: 'login-email', class: 'inp', type: 'email', autocomplete: 'email', inputmode: 'email', required: '', placeholder: 'you@example.com', 'aria-label': 'Email' });
   const code = el('input', { id: 'login-code', class: 'inp', type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '8', placeholder: '6-digit code', 'aria-label': 'Code from the email' });
   const send = el('button', { type: 'submit', class: 'primary' }, 'Email me a sign-in link');
@@ -64,12 +68,17 @@ async function boot(session) {
     await sb.auth.signOut(); return;
   }
   if (!member) { booting = false; showLogin('First sign-in needs an internet connection.'); return; }
+  // Arrived from Claude or ChatGPT to connect it: answer that first, then open the journal.
+  if (authz.pending() && navigator.onLine !== false) {
+    $('#app').hidden = true; $('#tabs').hidden = true; $('#login').hidden = false;
+    await new Promise((done) => authz.show({ sb, box: $('#login-card'), issuer: AI_BASE, who: member.name === 'andra' ? 'Andra' : 'Greg', done }));
+  }
   booted = true;
   const db = await openDb();
   store = await createStore({ sb, householdId: member.hid, me: member.name, db });
   $('#login').hidden = true; $('#app').hidden = false; $('#tabs').hidden = false;
   const ctx = {
-    store, sb, me: member.name, householdId: member.hid, email: member.email, build: BUILD, retentionDays: member.retention,
+    store, sb, me: member.name, householdId: member.hid, email: member.email, build: BUILD, retentionDays: member.retention, mcpUrl: AI_BASE ? AI_BASE + '/mcp' : '',
     async signOut() {
       const n = store.pending();
       if (n && !confirm(`${n} change${n === 1 ? ' is' : 's are'} not sent yet and would be lost. Sign out anyway?`)) return;
