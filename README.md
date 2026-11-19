@@ -78,9 +78,10 @@ Install: iPhone, Safari > Share > Add to Home Screen. Android, Chrome > Install 
 **From GitHub (no laptop needed).** Every push to `main` applies the migrations and deploys the function before the app.
 Set this up once, in repo Settings > Secrets and variables > Actions:
 
-- Secret `SUPABASE_ACCESS_TOKEN`: create one at supabase.com/dashboard/account/tokens. It can manage every project in
-  your Supabase account, so keep it only here.
-- Secret `SUPABASE_DB_PASSWORD`: the database password of the project (Project Settings > Database can reset it).
+- Secret `SUPABASE_ACCESS_TOKEN`: create one at supabase.com/dashboard/account/tokens, scoped to the project, with
+  read-write on Edge Functions and Edge Function Secrets. Keep it only here.
+- Secret `SUPABASE_DB_URL`: Supabase > Connect > **Session pooler** connection string, with `[YOUR-PASSWORD]` replaced by
+  the database password (Project Settings > Database can reset it; letters and digits only avoids URL-encoding).
 - Variable `SUPABASE_URL` (already needed for the app). Optional variable `APP_URL` if the app is not at
   `https://<owner>.github.io/<repo>/`.
 

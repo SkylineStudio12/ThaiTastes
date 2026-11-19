@@ -139,8 +139,9 @@ tools, the audit log and the rate limits.
 
 Steps 1 to 4 work from a phone browser.
 
-- [ ] Supabase: create an access token at supabase.com/dashboard/account/tokens; note the database password.
-- [ ] GitHub repo Settings > Secrets and variables > Actions: secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`;
+- [ ] Supabase: create an access token (Edge Functions and Edge Function Secrets, read-write); copy the Session pooler
+      connection string from Connect, with the database password filled in.
+- [ ] GitHub repo Settings > Secrets and variables > Actions: secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_URL`;
       variables `SUPABASE_URL` and `SUPABASE_ANON_KEY` (Supabase > Project Settings > API).
 - [ ] Merge PR #4. The workflow applies the migrations, deploys the function, checks it answers 401, then deploys the app.
 - [ ] Supabase Auth (dashboard): signups off, Site URL and Redirect URL = the Pages address, `{{ .Token }}` line in the
